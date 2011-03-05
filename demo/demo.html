@@ -22,7 +22,7 @@ function newKitten(kitten_data)
 j.Root(j.Layout({width: "960px", chunks: 13, gap: "15px"}, 
     j.Column({span: 5},
         j.ContentBox({"class": "bordered"},
-            j.Header({level: 2}, "About This Page"),
+            j.H2("About This Page"),
             j.P("This is a demonstration of jComponent.  Instead of HTML combined with " + 
             "javascript, this page is pure javascript, laid out in a declarative " +
             "block of code that mimics the nested structure of HTML.  Unlike HTML, " +
@@ -33,7 +33,7 @@ j.Root(j.Layout({width: "960px", chunks: 13, gap: "15px"},
             j.P("As well as demonstrating jComponent, this page is meant to be useful for " +
             "anyone who needs help keeping track of their kittens")
         ),
-        j.Header({level: 2}, "Add New Kitten"),
+        j.H2("Add New Kitten"),
         j.Form({action: newItem},
             j.Line("Name: ", j.Input({name: "name"})),
             j.Line("Description:"),
@@ -44,10 +44,10 @@ j.Root(j.Layout({width: "960px", chunks: 13, gap: "15px"},
     ),
     
     j.Column({span: 8},
-        j.Header({level: 2}, "My Kittens"),
+        j.H2("My Kittens"),
         j.Img({href: "http://placekitten.com/300/200"}),
         j.Set({bind: kitten}, 
-            j.Header({level: 3}, j.Ref("name"), " ", j.RemoveButton("(x)")),
+            j.H3(j.Ref("name"), " ", j.RemoveButton("(x)")),
             j.Line(j.Ref("sex"), ': ', j.Ref("desc"))
         )
     )

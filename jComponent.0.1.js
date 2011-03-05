@@ -263,10 +263,18 @@ j = function() {
     }
 
     j.H1 = j.SimpleHTML('H1');
-    
     j.H2 = j.SimpleHTML('H2');
+    j.H3 = j.SimpleHTML('H3');
+    j.H4 = j.SimpleHTML('H4');
+    j.H5 = j.SimpleHTML('H5');
+    j.H6 = j.SimpleHTML('H6');
 
     j.Line = j.SimpleHTML('div', 'j_line');
+    
+    j.A = j.SimpleHTML('A', 'j_A', function(obj)
+    {
+        obj.attributes.href = obj.config.href;
+    });
 
     j.Form = j.SimpleHTML('form', 'j_form', function(obj)
     {
