@@ -5,7 +5,9 @@
 <title>jComponent Demo</title>
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
 <script src="http://ajax.microsoft.com/ajax/jquery.validate/1.7/jquery.validate.min.js"></script>
-<script src="https://github.com/jphaas/jComponent/raw/master/jComponent.0.1.js"></script>
+<script src="../jComponent.0.1.js"></script>
+<link rel="stylesheet" type="text/css" href="jCom_theme_default.css" />
+
 <script language="javascript">
 
 //our list of kittens
@@ -19,9 +21,9 @@ function newKitten(kitten_data)
 }
 
 //the body of the webpage
-j.Root(j.Layout({width: "960px", chunks: 13, gap: "15px"}, 
-    j.Column({span: 5},
-        j.ContentBox({"class": "bordered"},
+j.Root(j.Layout({width: 960, chunks: 13, gap: 50}, 
+    j.Column({span: 8},
+        j.ContentBox(
             j.H2("About This Page"),
             j.P("This is a demonstration of jComponent.  Instead of HTML combined with " + 
             "javascript, this page is pure javascript, laid out in a declarative " +
@@ -33,23 +35,25 @@ j.Root(j.Layout({width: "960px", chunks: 13, gap: "15px"},
             j.P("As well as demonstrating jComponent, this page is meant to be useful for " +
             "anyone who needs help keeping track of their kittens")
         ),
-        j.H2("Add New Kitten"),
-        j.Form({action: newItem},
-            j.Line("Name: ", j.Input({name: "name"})),
-            j.Line("Description:"),
-            j.Line(j.Input({name: "desc", type: "textarea"})),
-            j.Line("Sex: ", j.Input({name: "sex", type: "dropdown", choices: ["Male", "Female"]})),
-            j.Line(j.Submit("I BOUGHT A KITTEN!!!"))
-        )
+        j.Img({src: "http://placekitten.com/300/200"})
     ),
     
-    j.Column({span: 8},
+    j.Column({span: 5},
+        j.H2("Add New Kitten"),
+        j.Form({action: newKitten},
+            j.P("Name: ", j.Input({name: "name"})),
+            j.P(
+                j.Line("Description:"),
+                j.Line(j.Input({name: "desc", type: "textarea"}))
+            ),
+            j.P("Sex: ", j.Input({name: "sex", type: "dropdown", choices: ["Male", "Female"]})),
+            j.P(j.Submit("I BOUGHT A KITTEN!!!"))
+        ),
         j.H2("My Kittens"),
-        j.Img({href: "http://placekitten.com/300/200"}),
-        j.Set({bind: kitten}, 
-            j.H3(j.Ref("name"), " ", j.RemoveButton("(x)")),
+        j.Set({bind: kittens}, j.P(
+            j.Line(j.Ref("name"), " ", j.RemoveButton("(x)")),
             j.Line(j.Ref("sex"), ': ', j.Ref("desc"))
-        )
+        ))
     )
 ));
 

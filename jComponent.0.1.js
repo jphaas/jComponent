@@ -16,7 +16,8 @@ Installation:
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
 <script src="http://ajax.microsoft.com/ajax/jquery.validate/1.7/jquery.validate.min.js"></script>
 <script src="jComponent.0.1.js"></script>
-
+Optionally, insert a stylesheet:
+<link rel="stylesheet" type="text/css" href="demo/jCom_theme_default.css" />
 
 */
 
@@ -92,31 +93,6 @@ j = function() {
 
     }
     
-    function _mk_attributes(dict){
-        var ret = [];
-        for (attr in dict)
-        {
-            var atstr;
-            if ($.isArray(dict[attr])) { 
-                atstr = dict[attr].join(' ');
-            }
-            else {
-                atstr = dict[attr];
-            }
-            ret.push(' ' + attr + '="' + atstr + '"'); 
-        }
-        return ret.join('');
-    }
-    
-    function _mk_styles(dict){
-        var ret = [];
-        for (style in dict)
-        {
-            ret.push(style + ': ' + dict[style] + ';'); 
-        }
-        return ret
-    }
-
     var _TextSpan = inherit(j.Element);
     _TextSpan.render = function(context) {
         this.context = context;
@@ -124,42 +100,62 @@ j = function() {
         return $('<span>' + this.content + '</span>'); 
     }
     
+    function push_context(old, property, object)
+    {
+        var new_context = inherit(old);
+        new_context[property] = object;
+        return new_context;
+    }
+    
     var _SimpleHTML = inherit(j.Element);
     _SimpleHTML.render = function(context) {
         this.context = context;
-        if (this.config.align == 'center') { this.styles.margin = '0 auto'; }
+        if (this.config.align == 'center') { 
+            this.styles['margin-left'] = 'auto'; 
+            this.styles['margin-right'] = 'auto'; 
+        }
         if (this.config.align == 'left' || this.config.align == 'right') { this.styles.float = this.config.align; }
-        this.attributes.style = _mk_styles(this.styles);
-        this.attributes.class = this.classes;
-        this.tag = $('<' + this.tagname + _mk_attributes(this.attributes) + '></' + this.tagname + '>');
+        this.tag = $('<' + this.tagname + '>');
         var mytag = this.tag;
+        $.each(this.attributes, function(attname, attvalue) { mytag.attr(attname, attvalue); });
+        $.each(this.classes, function(index, classname) { mytag.addClass(classname); });
+        $.each(this.styles, function(stylename, stylevalue) { mytag.css(stylename, stylevalue); });
         for (e in this.events)
         {
             this.tag.bind(e, this.events[e]);
         }
-        $.each(this.children, function(index, child) { mytag.append(child.render(context)); });
-        if (this.custom_render) { this.custom_render(context); }
+        ctx = context;
+        if (this.custom_context)
+        {
+            ctx = push_context(ctx, this.custom_context_name, this.custom_context());
+        }
+        $.each(this.children, function(index, child) { mytag.append(child.render(ctx)); });
+        if (this.custom_render) { this.custom_render(ctx); }
         this.tag.data('j_owner', this);
         return this.tag;
     }
     
-    function _init_simple(tagname, classname)
+    function _init_simple(obj, tagname, classname)
     {
-        var obj = inherit(_SimpleHTML);
         obj.tagname = tagname;
         obj.attributes = {};
-        obj.config = {};
-        obj.children = [];
+        if (!obj.config) { obj.config = {}; }
+        if (!obj.children) {obj.children = []; }
         obj.events = {};
         obj.classes = classname ? [classname] : [];
+        if (obj.config.class)
+        {
+            if ($.isArray(obj.config.class)) { obj.classes.push.apply(obj.classes, obj.config.class); }
+            else {obj.classes.push(obj.config.class);}
+        }
         obj.styles = {};
-        return obj;
     }
     
     j.SimpleHTML = function(tagname, classname, postprocess) { return function()
         {     
-            var obj = _init_simple(tagname, classname);
+            var obj = inherit(_SimpleHTML);
             _capture_args.apply(obj, arguments);
+            _init_simple(obj, tagname, classname);
             if (postprocess) { postprocess(obj); }
             return obj;
         }
@@ -191,6 +187,7 @@ j = function() {
     
     var _Set = inherit(j.Element);
     _Set.render = function(old_context) {
+        this.parent_context = old_context;
         this.refresh();
         return this.tag;
     }
@@ -199,10 +196,11 @@ j = function() {
         var me = this;
         $.each(this.bindlist.content, function(index, item)
         {
+            new_context = push_context(me.parent_context, "set", {value: item, set: me, bindlist: me.bindlist});
             $.each(me.children, function(index, child) 
             { 
                 clone = element_clone(child);
-                me.tag.append(clone.render({value: item, set: me, bindlist: me.bindlist})); 
+                me.tag.append(clone.render(new_context)); 
             });
         });  
     }
@@ -219,7 +217,7 @@ j = function() {
     var _Ref = inherit(j.Element);
     _Ref.render = function(context)
     {
-        return context.value[this.property];
+        return context.set.value[this.property];
     }
     j.Ref = function(property) { 
         var ref = inherit(_Ref);
@@ -229,25 +227,14 @@ j = function() {
     
     j.RemoveButton = function(text)
     {
-        var obj = _init_simple('span', 'j_remove-button');
+        var obj = inherit(_SimpleHTML);
+        _init_simple(obj, 'span', 'j_remove-button');
         obj.children = [j.PlainText(text)];
         obj.events.click = function() {
-            $(this).data('j_owner').context.bindlist.remove($(this).data('j_owner').context.value);
+            $(this).data('j_owner').context.set.bindlist.remove($(this).data('j_owner').context.set.value);
         }
         return obj;
     }
-    
-    
-
-    
-
-
-    
-    j.Column = j.SimpleHTML('div', 'j_column', function(obj)
-    {
-        if (obj.config.width) { obj.styles.width = obj.config.width; }
-        obj.config.align = obj.config.align ? obj.config.align : 'left';
-    });
     
     j.TextSpan = function(text) {
         var obj = inherit(_TextSpan);
@@ -268,12 +255,21 @@ j = function() {
     j.H4 = j.SimpleHTML('H4');
     j.H5 = j.SimpleHTML('H5');
     j.H6 = j.SimpleHTML('H6');
+    
+    j.P = j.SimpleHTML('P');
+    
+    j.ContentBox = j.SimpleHTML('div', 'j_ContentBox');
 
     j.Line = j.SimpleHTML('div', 'j_line');
     
     j.A = j.SimpleHTML('A', 'j_A', function(obj)
     {
         obj.attributes.href = obj.config.href;
+    });
+    
+    j.Img = j.SimpleHTML('img', 'j_Img', function(obj)
+    {
+        obj.attributes.src = obj.config.src;
     });
 
     j.Form = j.SimpleHTML('form', 'j_form', function(obj)
@@ -297,7 +293,8 @@ j = function() {
 
     j.Submit = function(text)
     {
-        var obj = _init_simple('input', 'j_submit');
+        var obj = inherit(_SimpleHTML);
+        _init_simple(obj, 'input', 'j_submit');
         obj.config = {};
         obj.children = [];
         obj.attributes.type = 'submit';
@@ -314,8 +311,9 @@ j = function() {
     
     j.Input = function()
     {
-        var obj = _init_simple('input', 'j_input');
+        var obj = inherit(_SimpleHTML);
         _capture_args.apply(obj, arguments);
+        _init_simple(obj, 'input', 'j_input');
         if (obj.config.type == 'textarea') { obj.tagname = 'textarea' }
         if (obj.config.type == 'dropdown')
         {
@@ -333,15 +331,54 @@ j = function() {
     
     j.Layout = j.SimpleHTML('div', 'j_layout', function(obj)
     {
-        if (obj.config.width) { obj.styles.width = obj.config.width; }
+        if (obj.config.width) 
+        { 
+            if (obj.config.chunks) 
+            {
+                if (!obj.config.gap) {obj.config.gap = 0 }
+                obj.config.chunk_size = (obj.config.width - 
+                    (obj.config.gap * (obj.config.chunks - 1))) / obj.config.chunks;
+            }
+            obj.styles.width = obj.config.width;
+        }
         obj.config.align = obj.config.align ? obj.config.align : 'center';
+        obj.custom_context_name = "Layout";
+        obj.custom_context = function()
+        {
+            return {chunk_size: this.config.chunk_size, gap: this.config.gap, first: true};
+        }
+    });
+    
+    
+    j.Column = j.SimpleHTML('div', 'j_column', function(obj)
+    {
+        obj.custom_render = function(context)
+        {
+            if (context.Layout && context.Layout.chunk_size && this.config.span)
+            {
+                if (context.Layout.first || this.config.no_left)
+                {
+                    this.config.no_left = true;
+                    context.Layout.first = false;
+                    this.tag.css('margin-left', 0);
+                }
+                else
+                {
+                    this.tag.css('margin-left', context.Layout.gap);
+                }
+                this.tag.css('margin-right', 0);
+                this.tag.css('width', context.Layout.chunk_size * this.config.span + 
+                    context.Layout.gap * (this.config.span - 1));
+                this.tag.css('float', 'left');
+            }
+        }
     });
 
     j.Root = function(root_element)
     {
         $(document).ready(function()
         {
-            $(document.body).append(root_element.render());
+            $(document.body).append(root_element.render({}));
         });
     }
        
