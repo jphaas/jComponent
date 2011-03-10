@@ -12,20 +12,64 @@ Depends on:
 jQuery (Tested: 1.4.2, not tested on other versions) -- http://jquery.com/
 jQuery validate plugin (Tested: 1.7, not tested on other versions) -- http://bassistance.de/jquery-plugins/jquery-plugin-validation/
 
-Installation:
-<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
-<script src="http://ajax.microsoft.com/ajax/jquery.validate/1.7/jquery.validate.min.js"></script>
-<script src="jComponent.0.1.js"></script>
-Optionally, insert a stylesheet:
-<link rel="stylesheet" type="text/css" href="demo/jCom_theme_default.css" />
-
 */
 
 
 /*
-<?depends /jwl_lib/jquery.1.4.2.min.js?>
-<?depends /jwl_lib/jquery.validate.min.js?>
+<?depends jwl_lib/jquery.1.4.2.min.js?>
+<?depends jwl_lib/jquery.validate.min.js?>
 */
+
+
+/*
+
+** Interfaces (implicit):
+
+Scope 
+    A dictionary mapping names to bindables
+    
+Component
+    .make(scope: Scope): returns a new Instance.  Typically, will call make on child Components and append their .instances
+    .is_component: equals true
+    .children: a list of Components
+    
+Instance
+    .canvas: is a jQuery object that can be inserted into the DOM
+    
+Bindable
+    .make(scope: Scope): returns a bindable (could be itself for globally defined data, could be a different bindable for references)
+    .bind(instance: Instance): adds Instance to notification list
+    
+Config: a dictionary of key/value pairs
+    
+Constructor([config: Config], child1: Component, child2: Component...): given an optional Config, and a list of child components, returns
+    a new Component
+    
+SimpleConstructor(config: Config, children: [Component]):
+    returns a Component.  Like Constructor, but config is mandatory (can be {}), and children is an array, instead
+    of comma-seperated arguments.
+
+    
+** Building Components:
+
+j.construct(sc: SimpleConstructor): returns a Constructor that wraps sc
+
+j.componentFromMaker(maker(scope, config, children)) : returns a Constructor that generates a component c
+    such that c.make(scope) calls maker(scope, config, children).
+
+j.simpleInstance(html, classes, styles, events, attributes, auto_config):
+    returns a new Instance.  Starts with jQuery's $(html), adds on the classes, styles, events, and attributes.
+    auto_config should be a key/value dictionary (typically the Component's config object): if present,
+    goes through j.auto_config (see below) to add to classes, styles, event, and attributes.
+
+j.auto_config: a list of functions of the form func(config, classes, styles, events, attributes).  This is a mechanism
+    for inserting config elements that cut across multiple components.  You can insert additional functions into this 
+    list to add new config keys to watch for.  Functions should directly update the passed in lists (classes, styles, events, and attributes):
+    they should not have a return value.
+    
+*/
+
+
 
 function inherit(o) {
     function F() {  }
@@ -41,53 +85,54 @@ function generate_guid() {
 }
 
 j = function() {
-
-    //cloning js objects is tricky.  this function only purports to work for Elements; used by the Set object to generate new instances of children
-    //will die a horrible recursive death if there are circular references
-    element_clone = function(obj) {
-      var newObj = (this instanceof Array) ? [] : {};
-      for (i in obj) {
-        if (obj[i] && typeof obj[i] == "object") {
-          newObj[i] = element_clone(obj[i]);
-        } else newObj[i] = obj[i]
-      } return newObj;
-    };
-
-    //special remove based on the idea that identity is determined by ID
-    function arrayRemove(array, id, noerr)
-    {
-        var index = -1;
-        $.each(array, function(i, element)
-        {
-            if (element.id == id) {index = i; return false;}
-        });
-        if (index == -1) 
-        { if (!noerr) {throw "item " + item + " not found in array " + repr(array);} }
-        else {
-            array.splice(index, 1);
-        }
+ 
+    //puts a message on the error console
+    function log(msg) {
+        setTimeout(function() {
+            throw new Error(msg);
+        }, 0);
     }
 
     j = {};
     
+    j.construct = function(component_constructor) {
+        return function(){
+            var slice;
+            var config;
+            if (typeof(arguments[0]) == typeof({}) && !arguments[0].is_component) {
+                config = arguments[0];
+                slice = 1;
+            }
+            else {
+                config = {};
+                slice = 0;
+            }
+            var children = $.map($.makeArray(arguments).slice(slice), function(child) { 
+                return typeof(child) == 'string' ? j.TextSpan(child) : child;
+            });
+            return component_constructor(config, children);
+        }
+    }
+    
+    j.componentFromMaker = function(maker) {
+        return j.construct(function(config, children)
+        {
+            var c = {};
+            c.is_component = true;
+            c.children = children;
+            c.make = function(scope) { maker(scope, config, children); }
+            return c;
+        });
+    }
+  
+    
+    
+    
+    
     j.Element = {}
     j.Element.is_element = true;
     
-    function _capture_args()
-    {
-        var slice;
-        if (typeof(arguments[0]) == typeof({}) && !arguments[0].is_element) {
-            this.config = arguments[0];
-            slice = 1;
-        }
-        else {
-            this.config = {};
-            slice = 0;
-        }
-        this.children = $.map($.makeArray(arguments).slice(slice), function(child) { 
-            return typeof(child) == 'string' ? j.TextSpan(child) : child;
-        });
-    }
+    
     
     j.Element.construct = function(){
 
@@ -169,6 +214,10 @@ j = function() {
     _BindList.update = function(){
         $.each(this.bound, function(index, bound) { bound.refresh(); });  //replace with a more granular signal, such as "append", "remove"?
     }
+    _BindList.empty = function(){
+        this.content = [];
+        this.update();
+    }
     _BindList.append = function(item){
         this.content.push(item);
         this.update();
@@ -236,6 +285,17 @@ j = function() {
         return obj;
     }
     
+    j.Button = function(text, onclick)
+    {
+        var obj = inherit(_SimpleHTML);
+        _init_simple(obj, 'span', 'j_button');
+        obj.children = [j.PlainText(text)];
+        obj.events.click = function() {
+            onclick($(this).data('j_owner').context.set.value);
+        }
+        return obj;
+    }
+    
     j.TextSpan = function(text) {
         var obj = inherit(_TextSpan);
         obj.content = text;
@@ -278,14 +338,19 @@ j = function() {
             var me = this;
             this.tag.validate( { submitHandler: function()
             {
-                var form_data = {}
-                var inputs = me.tag.find('input, textarea, select');
-                inputs.each(function(index, element)
+                try {
+                    var form_data = {}
+                    var inputs = me.tag.find('input, textarea, select');
+                    inputs.each(function(index, element)
+                    {
+                        if ($(element).data('j_owner')) {form_data[$(element).attr('name')] = $(element).data('j_owner').get_value(); }
+                    });
+                    me.config.action(form_data);
+                } catch (e)
                 {
-                    if ($(element).data('j_owner')) {form_data[$(element).attr('name')] = $(element).data('j_owner').get_value(); }
-                });
-                me.config.action(form_data);
-                return false
+                    log(e);
+                }
+                return false;
             }});
         }
     });
@@ -380,6 +445,22 @@ j = function() {
         {
             $(document.body).append(root_element.render({}));
         });
+    }
+    
+    
+    //special remove based on the idea that identity is determined by ID
+    function arrayRemove(array, id, noerr)
+    {
+        var index = -1;
+        $.each(array, function(i, element)
+        {
+            if (element.id == id) {index = i; return false;}
+        });
+        if (index == -1) 
+        { if (!noerr) {throw "item " + item + " not found in array " + repr(array);} }
+        else {
+            array.splice(index, 1);
+        }
     }
        
     return j;

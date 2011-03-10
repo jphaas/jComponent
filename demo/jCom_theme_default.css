@@ -85,7 +85,7 @@ textarea {
     height: 72px;
 }
 
-.j_remove-button {
+.j_remove-button, .j_button {
     color: blue;
     text-decoration: underline;
     cursor: pointer;
