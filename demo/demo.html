@@ -11,30 +11,31 @@
 <script language="javascript">
 
 //our list of kittens
-var kittens = j.BindList();
+var kittens = j.Bind([]);
 
 //handler for adding a new kitten
-function newKitten(kitten_data)
-{
-    kitten_data.id = generate_guid();
-    kittens.append(kitten_data);
+function newKitten(kitten_data) {
+    kitten_data.id = j.generate_guid();
+    kittens.add(kitten_data);
+}
+
+function remove(kitten) {
+    kittens.remove(kitten, 'id');
 }
 
 //the body of the webpage
-j.Root(j.Layout({width: 960, chunks: 13, gap: 50}, 
+j.Root(j.Layout({width: 960, chunks: 13, gap: 50, align: 'center'}, 
     j.Column({span: 8},
-        j.ContentBox(
-            j.H2("About This Page"),
-            j.P("This is a demonstration of jComponent.  Instead of HTML combined with " + 
-            "javascript, this page is pure javascript, laid out in a declarative " +
-            "block of code that mimics the nested structure of HTML.  Unlike HTML, " +
-            "however, you can define new components in addition to the old standbys of " +
-            "div, p, input, and their friends.  Also, components can have automatic behavior, " +
-            "such as a data-binding.  To learn more, visit ", 
-            j.A({href: "https://github.com/jphaas/jComponent"}, "the project homepage")),
-            j.P("As well as demonstrating jComponent, this page is meant to be useful for " +
-            "anyone who needs help keeping track of their kittens")
-        ),
+        j.H2("About This Page"),
+        j.P("This is a demonstration of jComponent.  Instead of HTML combined with " + 
+        "javascript, this page is pure javascript, laid out in a declarative " +
+        "block of code that mimics the nested structure of HTML.  Unlike HTML, " +
+        "however, you can define new components in addition to the old standbys of " +
+        "div, p, input, and their friends.  Also, components can have automatic behavior, " +
+        "such as a data-binding.  To learn more, visit ", 
+        j.A({href: "https://github.com/jphaas/jComponent"}, "the project homepage")),
+        j.P("As well as demonstrating jComponent, this page is meant to be useful for " +
+        "anyone who needs help keeping track of their kittens"),
         j.Img({src: "http://placekitten.com/300/200"})
     ),
     
@@ -47,12 +48,12 @@ j.Root(j.Layout({width: 960, chunks: 13, gap: 50},
                 j.Line(j.Input({name: "desc", type: "textarea"}))
             ),
             j.P("Sex: ", j.Input({name: "sex", type: "dropdown", choices: ["Male", "Female"]})),
-            j.P(j.Submit("I BOUGHT A KITTEN!!!"))
+            j.P(j.Submit({text: "I BOUGHT A KITTEN!!!"}))
         ),
         j.H2("My Kittens"),
-        j.Set({bind: kittens}, j.P(
-            j.Line(j.Ref("name"), " ", j.RemoveButton("(x)")),
-            j.Line(j.Ref("sex"), ': ', j.Ref("desc"))
+        j.Set({bind: kittens, to: 'k'}, j.P(
+            j.Line(j.Ref("k.name"), " ", j.Button({action: j.Call(remove, 'k')}, "(x)")),
+            j.Line(j.Ref("k.sex"), ': ', j.Ref("k.desc"))
         ))
     )
 ));

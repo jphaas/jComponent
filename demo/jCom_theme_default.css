@@ -50,7 +50,7 @@ table {
 
 /* Then, customize the various elements */
 
-body>.j_layout {
+body>.j_Layout {
     margin-top: 20px;
 }
 
@@ -85,7 +85,7 @@ textarea {
     height: 72px;
 }
 
-.j_remove-button, .j_button {
+.j_Button {
     color: blue;
     text-decoration: underline;
     cursor: pointer;
